@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -128,6 +129,7 @@ type Storage struct {
 	repo map[string][]string
 	// хранилище каналов
 	ch map[string][]chan string
+	sync.Mutex
 }
 
 type Stor interface {
@@ -148,6 +150,8 @@ func NewStorage() *Storage {
 
 // Add метод добавления нового значения
 func (s *Storage) Add(name string, value string) {
+	s.Lock()
+	defer s.Unlock()
 	// если есть каналы с таким именем, то значение сразу отправляем туда
 	channels, ok := s.ch[name]
 	// проверяем есть ли хранилище с каналам с таким именем
@@ -175,6 +179,8 @@ func (s *Storage) Add(name string, value string) {
 
 // Get метод получения значения из хранилища значений
 func (s *Storage) Get(name string) (string, error) {
+	s.Lock()
+	defer s.Unlock()
 	// проверяем есть ли слайсы в мапе с таким именем
 	values, ok := s.repo[name]
 	if !ok || (len(values) == 0) {
@@ -191,6 +197,8 @@ func (s *Storage) Get(name string) (string, error) {
 
 // Subscribe метод получения значения по подсписке
 func (s *Storage) Subscribe(ctx context.Context, name string) string {
+	s.Lock()
+	defer s.Unlock()
 	// проверяем если в хранилище есть значение, то его и возвращаем
 	val, err := s.Get(name)
 	if err == nil {
